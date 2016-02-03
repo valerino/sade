@@ -73,11 +73,11 @@ endif
 debug-startclient:
 ifeq ($(DEBUGGER), gdb)
 	$(call create_gdb_setup)
-	$(GDB_SRC) -x ./gdb.setup
+	$(GDB_SRC) -x $(OUT_DIR)/gdb.setup
 else
 	$(call create_lldb_setup)
-	$(LLDB_SRC) -s ./lldb.setup
+	$(LLDB_SRC) -s $(OUT_DIR)/lldb.setup
 endif
 
 clean:
-	rm -f $(OUT_DIR)/$(OUT_BIN) *.o $(OUT_DIR)/*.o
+	rm -f $(OUT_DIR)/$(OUT_BIN) *.o $(OUT_DIR)/gdb.setup $(OUT_DIR)/lldb.setup
