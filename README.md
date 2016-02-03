@@ -1,30 +1,40 @@
 #sade
 
 since i banged my head the whole day to setup that damn gdb/lldb/whatever environment for native android development,
-i think this may help someone else facing the same hurdle.....
+i think this may help someone else facing the same hurdles.....
 
-the included scripts tries to abstract the whole process.
+the included standard Makefile tries to abstract the whole process.
 
 #prerequisites
 android ndk
 
-android sdk
+android sdk and lldb (to use lldb/lldb-server)
 
-lldb (to use lldb)
+#how to use it
+env.setup contains the customizations you need to adapt to your environment (paths, etc...)
 
-#usage
-first of all, customize ./env.setup with your source files, flags, paths and init scripts for gdb/lldb
+you can extend it as you will, providing your compiler flags and all.
 
-to compile and push on the device:
+then, just issuing 'make' will print a nice help
 
-make push-gdb -> to build with gcc and setup remote debugging with gdbserver
+usage:
 
-make push-lldb -> to build with clang and setup remote debugging with lldb-server
+	make build
+	build with COMPILER defined in env.setup (gcc or clang)
 
-to debug, run in another shell:
+	make push
+	push the built files on the connected device
 
-make debug-gdb -> to debug using gdb
+	make build-push
+	'make build' & 'make push' in one shot
 
-make debug-lldb -> to debug using lldb
+	make debug-startserver
+	push the debugger server on device and start it, according to DEBUGGER defined in env.setup (gdb or lldb)
+	the current shell will hangs until debug has ended and/or error
 
+	make debug-startclient
+	starts the debugger client on the host, according to DEBUGGER defined in env.setup (gdb or lldb)
+	must be run in another shell to connect with the server started with 'make debug-startserver'
 
+#NOTE
+i made this for android development, but really you can customize this for almost every environment supporting gdb/lldb remote debugging: just play with the provided env.setup!

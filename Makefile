@@ -3,57 +3,81 @@
 
 include env.setup
 
-all:
-	@echo 'usage:'
-	@echo 'customize ./env.setup with your source files, flags, paths and init scripts for gdb/ldb'
-	@echo ''
-	@echo 'to compile and push on the device:'
-	@echo 'make push-gdb -> to build with gcc and setup remote debugging with gdbserver'
-	@echo 'make push-lldb -> to build with clang and setup remote debugging with lldb-server'
-	@echo ''
-	@echo 'to debug, run in another shell:'
-	@echo 'make debug-gdb -> to debug using gdb'
-	@echo 'make debug-lldb -> to debug using lldb'
+define BANNER
+sade - simple (native) android debug environment
+(c)opyleft, valerino, 2016
 
-define push-post
+usage:
+	make build
+	build with COMPILER defined in env.setup (gcc or clang)
+
+	make push
+	push the built files on the connected device
+
+	make build-push
+	'make build' & 'make push' in one shot
+
+	make debug-startserver
+	push the debugger server on device and start it, according to DEBUGGER defined in env.setup (gdb or lldb)
+	will stop the current shell until debug has ended and/or error
+
+	make debug-startclient
+	starts the debugger client on the host, according to DEBUGGER defined in env.setup (gdb or lldb)
+	must be run in another shell to connect with the server started with 'make debug-startserver'
+endef
+export BANNER
+
+# push the needed stuff on android device
+define android-push-common
+	adb forward tcp:5039 tcp:5039
+	adb push ./runserver.sh $(DEVICE_DIR)
+	adb shell chmod 755 $(DEVICE_DIR)/runserver.sh
 	adb push ./$(OUT_BIN) $(DEVICE_DIR)
 	adb shell chmod 755 $(DEVICE_DIR)/$(OUT_BIN)
 endef
 
-push-common:
-	adb forward tcp:5039 tcp:5039
-	adb push ./runserver.sh $(DEVICE_DIR)
-	adb push ./env.setup $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/runserver.sh
-	adb shell chmod 755 $(DEVICE_DIR)/env.setup
+# compile using gcc
+define compile-gcc
+	$(GCC_SRC) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
+endef
 
-compile-gcc: push-common
-	$(GCC) $(CFLAGS) $(SOURCES) -o ./$(OUT_BIN)
-	$(call push-post)
+# compile using clang
+define compile-clang
+	$(CLANG_SRC) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
+endef
 
-compile-clang: push-common
-	$(CLANG) $(CFLAGS) $(SOURCES) -o ./$(OUT_BIN)
-	$(call push-post)
+all:
+	@echo "$$BANNER"
 
-push-gdb: compile-gcc
+build:
+	$(call compile-$(COMPILER))
+
+push:
+	$(call android-push-common)
+
+build-push: build
+	$(call android-push-common)
+
+debug-startserver:
+ifeq ($(DEBUGGER),gdb)
 	adb push $(GDBSERVER_SRC) $(DEVICE_DIR)
 	adb shell chmod 755 $(DEVICE_DIR)/$(GDBSERVER_BIN)
-	@echo '**** NOW RUN make debug-gdb IN ANOTHER SHELL ****'
-	adb shell $(DEVICE_DIR)/runserver.sh $(GDBSERVER_BIN) $(DEVICE_DIR) $(OUT_BIN)
 
-push-lldb: compile-clang
+	adb shell $(DEVICE_DIR)/runserver.sh $(GDBSERVER_BIN) $(DEVICE_DIR) $(OUT_BIN)
+else
 	adb push $(LLDBSERVER_SRC) $(DEVICE_DIR)
 	adb shell chmod 755 $(DEVICE_DIR)/$(LLDBSERVER_BIN)
-	@echo '**** NOW RUN make debug-lldb IN ANOTHER SHELL ****'
 	adb shell $(DEVICE_DIR)/runserver.sh $(LLDBSERVER_BIN) $(DEVICE_DIR) $(OUT_BIN)
+endif
 
-debug-gdb:
+debug-startclient:
+ifeq ($(DEBUGGER), gdb)
 	$(call create_gdb_setup)
-	$(GDB) -x ./gdb.setup
-
-debug-lldb:
+	$(GDB_SRC) -x ./gdb.setup
+else
 	$(call create_lldb_setup)
-	$(LLDB) -s ./lldb.setup
+	$(LLDB_SRC) -s ./lldb.setup
+endif
 
 clean:
-	rm -f $(OUT_BIN) *.o
+	rm -f $(OUT_DIR)/$(OUT_BIN) *.o $(OUT_DIR)/*.o
