@@ -7,7 +7,9 @@ the included scripts tries to abstract the whole process.
 
 #prerequisites
 android ndk
-android ndk
+
+android sdk
+
 lldb (to use lldb)
 
 #usage
@@ -22,6 +24,7 @@ make push-lldb -> to build with clang and setup remote debugging with lldb-serve
 to debug, run in another shell:
 
 make debug-gdb -> to debug using gdb
-echo 'make debug-lldb -> to debug using lldb
+
+make debug-lldb -> to debug using lldb
 
 
