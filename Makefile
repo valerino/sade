@@ -29,6 +29,7 @@ export BANNER
 
 # push the needed stuff on android device
 define android-push-common
+	@echo [.] uploading binaries...
 	adb forward tcp:5039 tcp:5039
 	adb push ./runserver.sh $(DEVICE_DIR)
 	adb shell chmod 755 $(DEVICE_DIR)/runserver.sh
@@ -38,12 +39,14 @@ endef
 
 # compile using gcc
 define compile-gcc
-	$(GCC_SRC) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
+	@echo [.] build using gcc...
+	$(_GCC) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
 endef
 
 # compile using clang
 define compile-clang
-	$(CLANG_SRC) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
+	@echo [.] build using clang...
+	$(_CLANG) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
 endef
 
 all:
@@ -60,24 +63,30 @@ build-push: build
 
 debug-startserver:
 ifeq ($(DEBUGGER),gdb)
-	adb push $(GDBSERVER_SRC) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(GDBSERVER_BIN)
-
-	adb shell $(DEVICE_DIR)/runserver.sh $(GDBSERVER_BIN) $(DEVICE_DIR) $(OUT_BIN)
+	@echo [.] uploading gdbserver...
+	adb push $(_GDBSERVER) $(DEVICE_DIR)
+	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_GDBSERVER))
+	@echo [.] starting gdbserver...
+	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_GDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
 else
-	adb push $(LLDBSERVER_SRC) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(LLDBSERVER_BIN)
-	adb shell $(DEVICE_DIR)/runserver.sh $(LLDBSERVER_BIN) $(DEVICE_DIR) $(OUT_BIN)
+	@echo [.] uploading lldbserver...
+	adb push $(_LLDBSERVER) $(DEVICE_DIR)
+	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_LLDBSERVER))
+	@echo [.] starting lldb-server...
+	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_LLDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
 endif
 
 debug-startclient:
 ifeq ($(DEBUGGER), gdb)
 	$(call create_gdb_setup)
-	$(GDB_SRC) -x $(OUT_DIR)/gdb.setup
+	@echo [.] starting gdb...
+	$(_GDB) -x $(OUT_DIR)/gdb.setup
 else
 	$(call create_lldb_setup)
-	$(LLDB_SRC) -s $(OUT_DIR)/lldb.setup
+	@echo [.] starting lldb...
+	lldb -s $(OUT_DIR)/lldb.setup
 endif
 
 clean:
+	@echo [.] cleanup...
 	rm -f $(OUT_DIR)/$(OUT_BIN) *.o $(OUT_DIR)/gdb.setup $(OUT_DIR)/lldb.setup
