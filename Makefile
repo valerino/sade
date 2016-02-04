@@ -30,52 +30,53 @@ usage:
 endef
 export BANNER
 
-# push the needed stuff on android device
-define android-push-common
-	@echo [.] uploading binaries...
-	adb forward tcp:5039 tcp:5039
-	adb push ./runserver.sh $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/runserver.sh
-	adb push ./$(OUT_BIN) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(OUT_BIN)
+define android_setup_debug
+	@echo [.] setup debugging...
+	$(_ADB) forward tcp:5039 tcp:5039
+	$(_ADB) push ./runserver.sh $(DEVICE_DIR)
+	$(_ADB) shell chmod 755 $(DEVICE_DIR)/runserver.sh
 endef
 
-# compile using gcc
-define compile-gcc
+define android_push_binaries
+	@echo [.] uploading binaries...
+	$(_ADB) push ./$(OUT_BIN) $(DEVICE_DIR)
+	$(_ADB) shell chmod 755 $(DEVICE_DIR)/$(OUT_BIN)
+endef
+
+define compile_gcc
 	@echo [.] build using gcc...
 	$(_GCC) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
 endef
 
-# compile using clang
-define compile-clang
+define compile_clang
 	@echo [.] build using clang...
 	$(_CLANG) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
 endef
 
-define start-gdbserver
+define android_start_gdbserver
 	@echo [.] uploading gdbserver...
-	adb push $(_GDBSERVER) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_GDBSERVER))
+	$(_ADB) push $(_GDBSERVER) $(DEVICE_DIR)
+	$(_ADB) shell chmod 755 $(DEVICE_DIR)/$(notdir $(_GDBSERVER))
 	@echo [.] starting gdbserver...
-	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_GDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
+	$(_ADB) shell $(DEVICE_DIR)/runserver.sh $(notdir $(_GDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
 endef
 
-define start-lldbserver
+define android_start_lldbserver
 	@echo [.] uploading lldb-server...
-	adb push $(_LLDBSERVER) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_LLDBSERVER))
+	$(_ADB) push $(_LLDBSERVER) $(DEVICE_DIR)
+	$(_ADB) shell chmod 755 $(DEVICE_DIR)/$(notdir $(_LLDBSERVER))
 	@echo [.] starting lldb-server...
-	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_LLDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
+	$(_ADB) shell $(DEVICE_DIR)/runserver.sh $(notdir $(_LLDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
 endef
 
-define start-gdb
+define start_gdb
 	$(call create_gdb_setup)
 	@echo [.] starting gdb...
 	$(_GDB) -x $(OUT_DIR)/gdb.setup
 endef
 
-define start-lldb
-	$(call create_lldb_setup)
+define start_lldb
+	$(call android_create_lldb_setup)
 	@echo [.] starting lldb...
 	lldb -s $(OUT_DIR)/lldb.setup
 endef
@@ -84,33 +85,35 @@ all:
 	@echo "$$BANNER"
 
 build:
-	$(call compile-$(COMPILER))
+	$(call compile_$(COMPILER))
 
 push:
-	$(call android-push-common)
+	$(call android_push_binaries)
 
 build-push: build
-	$(call android-push-common)
+	$(call android_push_binaries)
 
 build-push-startserver: build-push
+	$(call android_setup_debug)
 ifeq ($(DEBUGGER),gdb)
-	$(call start-gdbserver)
+	$(call android_start_gdbserver)
 else
-	$(call start-lldbserver)
+	$(call android_start_lldbserver)
 endif
 
 debug-startserver:
+	$(call android_setup_debug)
 ifeq ($(DEBUGGER),gdb)
-	$(call start-gdbserver)
+	$(call android_start_gdbserver)
 else
-	$(call start-lldbserver)
+	$(call android_start_lldbserver)
 endif
 
 debug-startclient:
 ifeq ($(DEBUGGER), gdb)
-	$(call start-gdb)
+	$(call start_gdb)
 else
-	$(call start-lldb)
+	$(call start_lldb)
 endif
 
 clean:
