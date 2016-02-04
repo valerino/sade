@@ -8,7 +8,7 @@ the included standard Makefile tries to abstract the whole process.
 #prerequisites
 android ndk
 
-android sdk and lldb (to use lldb/lldb-server)
+lldb (to use lldb/lldb-server)
 
 #how to use it
 env.setup contains the customizations you need to adapt to your environment (paths, etc...)
@@ -27,6 +27,9 @@ usage:
 
 	make build-push
 	'make build' & 'make push' in one shot
+
+	make build-push-startserver
+	'make build' & 'make push' & 'make debug-startserver' in one shot
 
 	make debug-startserver
 	push the debugger server on device and start it, according to DEBUGGER defined in env.setup (gdb or lldb)

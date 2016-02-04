@@ -17,6 +17,9 @@ usage:
 	make build-push
 	'make build' & 'make push' in one shot
 
+	make build-push-startserver
+	'make build' & 'make push' & 'make debug-startserver' in one shot
+
 	make debug-startserver
 	push the debugger server on device and start it, according to DEBUGGER defined in env.setup (gdb or lldb)
 	will stop the current shell until debug has ended and/or error
@@ -49,6 +52,34 @@ define compile-clang
 	$(_CLANG) $(CFLAGS) $(SOURCES) -o $(OUT_DIR)/$(OUT_BIN)
 endef
 
+define start-gdbserver
+	@echo [.] uploading gdbserver...
+	adb push $(_GDBSERVER) $(DEVICE_DIR)
+	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_GDBSERVER))
+	@echo [.] starting gdbserver...
+	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_GDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
+endef
+
+define start-lldbserver
+	@echo [.] uploading lldbserver...
+	adb push $(_LLDBSERVER) $(DEVICE_DIR)
+	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_LLDBSERVER))
+	@echo [.] starting lldb-server...
+	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_LLDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
+endef
+
+define start-gdb
+	$(call create_gdb_setup)
+	@echo [.] starting gdb...
+	$(_GDB) -x $(OUT_DIR)/gdb.setup
+endef
+
+define start-lldb
+	$(call create_lldb_setup)
+	@echo [.] starting lldb...
+	lldb -s $(OUT_DIR)/lldb.setup
+endef
+
 all:
 	@echo "$$BANNER"
 
@@ -61,30 +92,25 @@ push:
 build-push: build
 	$(call android-push-common)
 
+build-push-startserver: build-push
+ifeq ($(DEBUGGER),gdb)
+	$(call start-gdbserver)
+else
+	$(call start-lldbserver)
+endif
+
 debug-startserver:
 ifeq ($(DEBUGGER),gdb)
-	@echo [.] uploading gdbserver...
-	adb push $(_GDBSERVER) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_GDBSERVER))
-	@echo [.] starting gdbserver...
-	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_GDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
+	$(call start-gdbserver)
 else
-	@echo [.] uploading lldbserver...
-	adb push $(_LLDBSERVER) $(DEVICE_DIR)
-	adb shell chmod 755 $(DEVICE_DIR)/$(notdir $(_LLDBSERVER))
-	@echo [.] starting lldb-server...
-	adb shell $(DEVICE_DIR)/runserver.sh $(notdir $(_LLDBSERVER)) $(DEVICE_DIR) $(OUT_BIN)
+	$(call start-lldbserver)
 endif
 
 debug-startclient:
 ifeq ($(DEBUGGER), gdb)
-	$(call create_gdb_setup)
-	@echo [.] starting gdb...
-	$(_GDB) -x $(OUT_DIR)/gdb.setup
+	$(call start-gdb)
 else
-	$(call create_lldb_setup)
-	@echo [.] starting lldb...
-	lldb -s $(OUT_DIR)/lldb.setup
+	$(call start-lldb)
 endif
 
 clean:
