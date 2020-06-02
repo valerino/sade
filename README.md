@@ -1,16 +1,16 @@
-#sade
+# sade
 
 since i banged my head the whole day to setup that damn gdb/lldb/whatever environment for native android development,
 i think this may help someone else facing the same hurdles.....
 
 the included standard Makefile tries to abstract the whole process.
 
-#prerequisites
+# prerequisites
 android ndk
 
 lldb (to use lldb/lldb-server)
 
-#how to use it
+# how to use it
 env.setup contains the customizations you need to adapt to your environment (paths, etc...)
 
 you can extend it as you will, providing your compiler flags and all.
@@ -39,5 +39,5 @@ usage:
 	starts the debugger client on the host, according to DEBUGGER defined in env.setup (gdb or lldb)
 	must be run in another shell to connect with the server started with 'make debug-startserver'
 
-#NOTE
+# NOTE
 i made this for android development, but really you can customize this for almost every environment supporting gdb/lldb remote debugging: just play with the provided env.setup!
